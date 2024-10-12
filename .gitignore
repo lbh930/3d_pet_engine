@@ -1,1 +1,4 @@
 .vscode
+build/*
+shaders/*.spv
+!build/CMakeLists.txt
