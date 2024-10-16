@@ -17471,7 +17471,7 @@ for(;;)
         // Inspect pass.pMoves[i].srcAllocation, identify what buffer/image it represents.
         VmaAllocationInfo allocInfo;
         vmaGetAllocationInfo(allocator, pass.pMoves[i].srcAllocation, &allocInfo);
-        MyEngineResourceData* resData = (MyEngineResourceData*)allocInfo.pUserData;
+        PetResourceData* resData = (PetResourceData*)allocInfo.pUserData;
 
         // Recreate and bind this buffer/image at: pass.pMoves[i].dstMemory, pass.pMoves[i].dstOffset.
         VkImageCreateInfo imgCreateInfo = ...
