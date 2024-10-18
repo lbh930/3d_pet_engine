@@ -4,6 +4,17 @@
 #include <GLFW/glfw3.h>
 #include "common/gl_shader.hpp"
 #include <glm/gtc/matrix_transform.hpp>
+#include "common/bmp_loader.hpp"
+#include <cmath>
+
+glm::mat4 ProjectionMatrix;
+glm::mat4 ViewMatrix;
+glm::vec3 position = glm::vec3(0.0f,0.0f,5.0f);
+float horizontal = 3.14f;
+float vertical = 0;
+glm::vec3 direction = glm::vec3(0.0f,0.0f,-1.0f);
+float speed = 3.0f;
+float mouseSpeed = 0.1f;
 
 int main(){
     glewExperimental = GL_TRUE; //for core profile
@@ -101,6 +112,8 @@ int main(){
     // Give our vertices to OpenGL.
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_vertex_buffer_data), g_vertex_buffer_data, GL_STATIC_DRAW);
 
+    std::cout<<"Vertex Buffer Data Size: "<<sizeof(g_vertex_buffer_data)<<std::endl;
+
         // One color for each vertex. They were generated randomly.
     static const GLfloat g_color_buffer_data[] = {
         0.583f,  0.771f,  0.014f,
@@ -146,45 +159,157 @@ int main(){
     glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
 
+    std::cout<<"Color Buffer Data Size: "<<sizeof(g_color_buffer_data)<<std::endl;
+
+    // Two UV coordinatesfor each vertex. They were created with Blender. You'll learn shortly how to do this yourself.
+    static const GLfloat g_uv_buffer_data[] = {
+        0.000059f, 1.0f-0.000004f,
+        0.000103f, 1.0f-0.336048f,
+        0.335973f, 1.0f-0.335903f,
+        1.000023f, 1.0f-0.000013f,
+        0.667979f, 1.0f-0.335851f,
+        0.999958f, 1.0f-0.336064f,
+        0.667979f, 1.0f-0.335851f,
+        0.336024f, 1.0f-0.671877f,
+        0.667969f, 1.0f-0.671889f,
+        1.000023f, 1.0f-0.000013f,
+        0.668104f, 1.0f-0.000013f,
+        0.667979f, 1.0f-0.335851f,
+        0.000059f, 1.0f-0.000004f,
+        0.335973f, 1.0f-0.335903f,
+        0.336098f, 1.0f-0.000071f,
+        0.667979f, 1.0f-0.335851f,
+        0.335973f, 1.0f-0.335903f,
+        0.336024f, 1.0f-0.671877f,
+        1.000004f, 1.0f-0.671847f,
+        0.999958f, 1.0f-0.336064f,
+        0.667979f, 1.0f-0.335851f,
+        0.668104f, 1.0f-0.000013f,
+        0.335973f, 1.0f-0.335903f,
+        0.667979f, 1.0f-0.335851f,
+        0.335973f, 1.0f-0.335903f,
+        0.668104f, 1.0f-0.000013f,
+        0.336098f, 1.0f-0.000071f,
+        0.000103f, 1.0f-0.336048f,
+        0.000004f, 1.0f-0.671870f,
+        0.336024f, 1.0f-0.671877f,
+        0.000103f, 1.0f-0.336048f,
+        0.336024f, 1.0f-0.671877f,
+        0.335973f, 1.0f-0.335903f,
+        0.667969f, 1.0f-0.671889f,
+        1.000004f, 1.0f-0.671847f,
+        0.667979f, 1.0f-0.335851f
+    };
+
+    GLuint uvbuffer;
+    glGenBuffers(1, &uvbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
+
+    std::cout<<"UV Buffer Data Size: "<<sizeof(g_uv_buffer_data)<<std::endl;
+
     // Create and compile GLSL program from the shaders
     GLuint programID = LoadShaders( "../../shaders/vertex.glsl", "../../shaders/fragment.glsl" );
 
+    //loadTexture
+    GLuint Texture = loadBMP("../../textures/sampletexture.bmp");
+    GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
+    glUniform1i(TextureID, 0);
+
+
     // Projection matrix: 45° Field of View, 4:3 ratio, display range: 0.1 unit <-> 100 units
     glm::mat4 Projection = glm::perspective(glm::radians(45.0f), (float) 800 / (float)600, 0.1f, 100.0f);
-
-    // Or, for an ortho camera:
-    //glm::mat4 Projection = glm::ortho(-10.0f,10.0f,-10.0f,10.0f,0.0f,100.0f); // In world coordinates
-
-    // Camera matrix
-    glm::mat4 View = glm::lookAt(
-        glm::vec3(5,3,4), // Camera is at (4,3,3), in World Space
-        glm::vec3(0,0,0), // and looks at the origin
-        glm::vec3(0,1,0)  // Head is up (set to 0,-1,0 to look upside-down)
-        );
-
-    // Model matrix: an identity matrix (model will be at the origin)
-    glm::mat4 Model = glm::mat4(1.0f);
-    // Our ModelViewProjection: multiplication of our 3 matrices
-    glm::mat4 mvp = Projection * View * Model; // Remember, matrix multiplication is the other way around
 
     // Get a handle for our "MVP" uniform
     // Only during the initialisation
     GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 
+    static double lastTime = glfwGetTime();
+
     do{
+        double currentTime = glfwGetTime();
+        float deltaTime = float(currentTime - lastTime);
+        lastTime = currentTime;
+
+        std::cout<<deltaTime<<std::endl;
+
+        // Get mouse position
+        double xpos, ypos;
+        glfwGetCursorPos(window, &xpos, &ypos);
+
+        std::cout<<"Mouse Position: "<<xpos<<", "<<ypos<<std::endl;
+
+        // Reset mouse position for next frame
+        glfwSetCursorPos(window, 800.0f/2.0f, 600.0f/2.0f);
+
+        // Compute new orientation
+        horizontal += mouseSpeed * deltaTime * float(800/2 - xpos );
+        vertical   += mouseSpeed * deltaTime * float( 600/2 - ypos );
+
+        // Direction : Spherical coordinates to Cartesian coordinates conversion
+        glm::vec3 direction(
+            cos(vertical) * sin(horizontal),
+            sin(vertical),
+            cos(vertical) * cos(horizontal)
+        );
+
+        std::cout<<"Direction: "<<direction.x<<", "<<direction.y<<", "<<direction.z<<std::endl;
+        std::cout<<position.x<<", "<<position.y<<", "<<position.z<<std::endl;
+
+        // Right vector
+        glm::vec3 right = glm::vec3(
+            sin(horizontal - 3.14f/2.0f),
+            0,
+            cos(horizontal - 3.14f/2.0f)
+        );
+
+        // Move forward
+        if (glfwGetKey(window,  GLFW_KEY_W ) == GLFW_PRESS){
+            std::cout<<"Moving forward"<<std::endl;
+            position += direction * deltaTime * speed;
+        }
+        // Move backward
+        if (glfwGetKey(window,  GLFW_KEY_S ) == GLFW_PRESS){
+            position -= direction * deltaTime * speed;
+        }
+        // Strafe right
+        if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS){
+            position += right * deltaTime * speed;
+        }
+        // Strafe left
+        if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS){
+            position -= right * deltaTime * speed;
+        }
+
+        //calculate MVP based on transformed camera
+        ViewMatrix  = glm::lookAt(
+            position,           // Camera is here
+            position+direction, // and looks here : at the same position, plus "direction"
+            glm::vec3(0,1,0)                 // Head is up (set to 0,-1,0 to look upside-down)
+        );
+
+        // Projection matrix : 45&deg; Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
+        ProjectionMatrix = glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
+        glm::mat4 ModelMatrix = glm::mat4(1.0);
+        glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
+
         // Send our transformation to the currently bound shader, in the "MVP" uniform
         // This is done in the main loop since each model will have a different MVP matrix (At least for the M part)
-        glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &mvp[0][0]);
+        glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
         // Clear the screen. It's not mentioned before Tutorial 02, but it can cause flickering, so it's there nonetheless.
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glUseProgram(programID);
 
+        //bind texture
+        glActiveTexture(GL_TEXTURE0);  // 激活纹理单元 0
+        glBindTexture(GL_TEXTURE_2D, Texture);  // 将加载的纹理绑定到 GL_TEXTURE_2D
+
+
         // Draw
-        // 1st attribute buffer : vertices
+        // 0 - attribute buffer : vertices
         glEnableVertexAttribArray(0);
         glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-
         glVertexAttribPointer(
         0,// attribute 0. No particular reason for 0, but must match the layout in the shader.
         3, // size
@@ -193,13 +318,25 @@ int main(){
         0, // stride
         (void*)0 // array buffer offset
         );
-
-        // 2nd attribute buffer : colors
+/*
+        // 1 - attribute buffer : colors
         glEnableVertexAttribArray(1);
         glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
         glVertexAttribPointer(
             1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
             3,                                // size
+            GL_FLOAT,                         // type
+            GL_FALSE,                         // normalized?
+            0,                                // stride
+            (void*)0                          // array buffer offset
+        );
+*/
+        // 2 - attribute buffer : UVs
+        glEnableVertexAttribArray(1);
+        glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+        glVertexAttribPointer(
+            1,                                // attribute. No particular reason for 2, but must match the layout in the shader.
+            2,                                // size : U+V --> 2
             GL_FLOAT,                         // type
             GL_FALSE,                         // normalized?
             0,                                // stride
