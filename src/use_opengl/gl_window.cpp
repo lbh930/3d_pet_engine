@@ -6,10 +6,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "common/bmp_loader.hpp"
 #include <cmath>
-#include "obj_loader.hpp"
+#include "common/obj_loader.hpp"
+#include "core/gl_context.hpp"
+#include "core/drawcall.hpp"
+#include "log/log.hpp"
+#include "common/gl_check.hpp"
+#include "windows.h"
 
-glm::mat4 ProjectionMatrix;
-glm::mat4 ViewMatrix;
 glm::vec3 position = glm::vec3(0.0f,0.0f,5.0f);
 float horizontal = 3.14f;
 float vertical = 0;
@@ -38,6 +41,14 @@ int main(){
     // We don't want the old OpenGL 
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); 
 
+    // Create a windowed mode window and its OpenGL context
+    glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GLFW_TRUE);
+    glfwWindowHint(GLFW_RED_BITS, 8);
+    glfwWindowHint(GLFW_GREEN_BITS, 8);
+    glfwWindowHint(GLFW_BLUE_BITS, 8);
+    glfwWindowHint(GLFW_ALPHA_BITS, 8);
+
     GLFWwindow* window = glfwCreateWindow(800, 600, "Laolu Productions", NULL, NULL);
 
     if (window == NULL){
@@ -46,8 +57,6 @@ int main(){
         return EXIT_FAILURE;
     }
     
-    glfwMakeContextCurrent(window);
-
     glfwMakeContextCurrent(window); 
     glewExperimental = true; // Needed in core profile
     // Initialize GLEW
@@ -59,46 +68,26 @@ int main(){
     // Ensure we can capture the escape key being pressed below
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-    GLuint VertexArrayID;
-    glGenVertexArrays(1, &VertexArrayID);
-    glBindVertexArray(VertexArrayID);
+    CheckGLError("GLFW Init");
 
-    //load the obj model
-    std::vector< glm::vec3 > vertices;
-    std::vector< glm::vec2 > uvs;
-    std::vector< glm::vec3 > normals; // Won't be used at the moment.
-    bool res = loadOBJ("../../objs/ring.obj", vertices, uvs, normals);
+    //GL context creation
+    //add draw call for the ring
+    GLContext context;
+    DrawCall drawCall;
+    drawCall.BindProgramID(LoadShaders("../../shaders/vertex.glsl", "../../shaders/fragment.glsl"));
+    CheckGLError("Shader Load");
+    drawCall.AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
+    CheckGLError("Light Add");
 
-    // Buffer vertices and UVs
-    GLuint vertexbuffer;
-    GLuint uvbuffer;
-    glGenBuffers(1, &vertexbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-    std::cout<<"Vertex Buffer Data Size: "<<vertices.size() * sizeof(glm::vec3)<<std::endl;
-    glGenBuffers(1, &uvbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-    glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
-    std::cout<<"UV Buffer Data Size: "<<uvs.size()*sizeof(glm::vec2)<<std::endl;
+    drawCall.AddModel("../../objs/ring.obj");
+    CheckGLError("Model Add");
+    drawCall.AddTexture("../../textures/ring.bmp");
+    CheckGLError("Texture Add");
 
-    // Create and compile GLSL program from the shaders
-    GLuint programID = LoadShaders( "../../shaders/vertex.glsl", "../../shaders/fragment.glsl" );
-
-    //loadTexture
-    GLuint Texture = loadBMP("../../textures/sampletexture.bmp");
-    GLuint TextureID = glGetUniformLocation(programID, "myTextureSampler");
-    glUniform1i(TextureID, 0);
-
-
-    // Projection matrix: 45° Field of View, 4:3 ratio, display range: 0.1 unit <-> 100 units
-    glm::mat4 Projection = glm::perspective(glm::radians(45.0f), (float) 800 / (float)600, 0.1f, 100.0f);
-
-    // Get a handle for our "MVP" uniform
-    // Only during the initialisation
-    GLuint MatrixID = glGetUniformLocation(programID, "MVP");
-
-    static double lastTime = glfwGetTime();
-
+    drawCall.BufferInit();
+    CheckGLError("Buffer Init");
+    
+    context.AddDrawCall(&drawCall);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);
@@ -106,9 +95,20 @@ int main(){
 
     glEnable(GL_CULL_FACE); // Cull triangles which normal is not towards the camera
 
+    // Enable blending
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glDepthFunc(GL_LESS);
 
+    CheckGLError("GL Context Init");
+
+    static double lastTime = glfwGetTime();
     do{
+
+        // Clear the screen
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        
         double currentTime = glfwGetTime();
         float deltaTime = float(currentTime - lastTime);
         lastTime = currentTime;
@@ -162,71 +162,12 @@ int main(){
             position -= right * deltaTime * speed;
         }
 
-        //calculate MVP based on transformed camera
-        ViewMatrix  = glm::lookAt(
-            position,           // Camera is here
-            position+direction, // and looks here : at the same position, plus "direction"
-            glm::vec3(0,1,0)                 // Head is up (set to 0,-1,0 to look upside-down)
-        );
-
-        // Projection matrix : 45&deg; Field of View, 4:3 ratio, display range : 0.1 unit <-> 100 units
-        ProjectionMatrix = glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
-        glm::mat4 ModelMatrix = glm::mat4(1.0);
-        glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-
-        // Send our transformation to the currently bound shader, in the "MVP" uniform
-        // This is done in the main loop since each model will have a different MVP matrix (At least for the M part)
-        glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-        // Clear the screen. It's not mentioned before Tutorial 02, but it can cause flickering, so it's there nonetheless.
+        //tick GL context to render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glUseProgram(programID);
+        //Log("Position: ", position.x, ", ", position.y, ", ", position.z);
+        //Log("Direction: ", direction.x, ", ", direction.y, ", ", direction.z);
 
-        //bind texture
-        glActiveTexture(GL_TEXTURE0);  // 激活纹理单元 0
-        glBindTexture(GL_TEXTURE_2D, Texture);  // 将加载的纹理绑定到 GL_TEXTURE_2D
-
-
-        // Draw
-        // 0 - attribute buffer : vertices
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-        glVertexAttribPointer(
-        0,// attribute 0. No particular reason for 0, but must match the layout in the shader.
-        3, // size
-        GL_FLOAT,// type
-        GL_FALSE, // normalized?
-        0, // stride
-        (void*)0 // array buffer offset
-        );
-/*
-        // 1 - attribute buffer : colors
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-        glVertexAttribPointer(
-            1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
-            3,                                // size
-            GL_FLOAT,                         // type
-            GL_FALSE,                         // normalized?
-            0,                                // stride
-            (void*)0                          // array buffer offset
-        );
-*/
-        // 2 - attribute buffer : UVs
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-        glVertexAttribPointer(
-            1,                                // attribute. No particular reason for 2, but must match the layout in the shader.
-            2,                                // size : U+V --> 2
-            GL_FLOAT,                         // type
-            GL_FALSE,                         // normalized?
-            0,                                // stride
-            (void*)0                          // array buffer offset
-        );
-
-        // Draw the triangle !
-        glDrawArrays(GL_TRIANGLES, 0, 12*3); // 12*3 indices starting at 0 -> 12 triangles -> 6 squares
-        glDisableVertexAttribArray(0);
+        context.Tick(position, direction);
 
         // Swap buffers
         glfwSwapBuffers(window);
@@ -236,4 +177,8 @@ int main(){
     while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
         glfwWindowShouldClose(window) == 0 );
 
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, int nShowCmd) {
+    return main();
 }
