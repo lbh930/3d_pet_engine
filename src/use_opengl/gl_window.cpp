@@ -18,7 +18,10 @@ float horizontal = 3.14f;
 float vertical = 0;
 glm::vec3 direction = glm::vec3(0.0f,0.0f,-1.0f);
 float speed = 3.0f;
-float mouseSpeed = 0.1f;
+float mouseSpeed = 0.5f;
+
+double lastCursorX = 800.0f/2.0f;
+double lastCursorY = 600.0f/2.0f;
 
 int main(){
     glewExperimental = GL_TRUE; //for core profile
@@ -74,14 +77,14 @@ int main(){
     //add draw call for the ring
     GLContext context;
     DrawCall drawCall;
-    drawCall.BindProgramID(LoadShaders("../../shaders/vertex.glsl", "../../shaders/fragment.glsl"));
+    drawCall.BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
     CheckGLError("Shader Load");
     drawCall.AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
     CheckGLError("Light Add");
 
-    drawCall.AddModel("../../objs/ring.obj");
+    drawCall.AddModel("objs/ring.obj");
     CheckGLError("Model Add");
-    drawCall.AddTexture("../../textures/ring.bmp");
+    drawCall.AddTexture("textures/ring.bmp");
     CheckGLError("Texture Add");
 
     drawCall.BufferInit();
@@ -104,6 +107,11 @@ int main(){
     CheckGLError("GL Context Init");
 
     static double lastTime = glfwGetTime();
+
+    float distance = glm::length(position);
+
+    //intialize cursor pos
+    glfwGetCursorPos(window, &lastCursorX, &lastCursorY);
     do{
 
         // Clear the screen
@@ -122,45 +130,62 @@ int main(){
         //std::cout<<"Mouse Position: "<<xpos<<", "<<ypos<<std::endl;
 
         // Reset mouse position for next frame
-        glfwSetCursorPos(window, 800.0f/2.0f, 600.0f/2.0f);
-
-        // Compute new orientation
-        horizontal += mouseSpeed * deltaTime * float(800/2 - xpos );
-        vertical   += mouseSpeed * deltaTime * float( 600/2 - ypos );
-
-        // Direction : Spherical coordinates to Cartesian coordinates conversion
-        glm::vec3 direction(
-            cos(vertical) * sin(horizontal),
-            sin(vertical),
-            cos(vertical) * cos(horizontal)
-        );
-
-        //std::cout<<"Direction: "<<direction.x<<", "<<direction.y<<", "<<direction.z<<std::endl;
-        //std::cout<<position.x<<", "<<position.y<<", "<<position.z<<std::endl;
+        //glfwSetCursorPos(window, 800.0f/2.0f, 600.0f/2.0f);
 
         // Right vector
-        glm::vec3 right = glm::vec3(
+        /*glm::vec3 right = glm::vec3(
             sin(horizontal - 3.14f/2.0f),
             0,
             cos(horizontal - 3.14f/2.0f)
-        );
+        );*/
 
+        //for now force look at origin
+        direction = glm::vec3(0.0f,0.0f,0.0f) - position;
+
+        glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0.0f,1.0f,0.0f), direction));
+        glm::vec3 up = glm::normalize(glm::cross( right, direction ));
+
+        // Compute new orientation
+        //horizontal += mouseSpeed * deltaTime * float(xpos - lastCursorX);
+        //vertical   += mouseSpeed * deltaTime * float(ypos - lastCursorY);
+        //Mouse control view as well
+
+        position += -1.0f * right * float(xpos - lastCursorX) * deltaTime * mouseSpeed;
+        position += up * float(ypos - lastCursorY) * deltaTime * mouseSpeed;
+        position = glm::normalize(position) * distance;
+        
+        lastCursorX = xpos;
+        lastCursorY = ypos;
+
+        //for now force look at origin
+        direction = glm::vec3(0.0f,0.0f,0.0f) - position;
+
+        //std::cout<<"Direction: "<<direction.x<<", "<<direction.y<<", "<<direction.z<<std::endl;
+        //std::cout<<position.x<<", "<<position.y<<", "<<position.z<<std::endl;
         // Move forward
         if (glfwGetKey(window,  GLFW_KEY_W ) == GLFW_PRESS){
-            position += direction * deltaTime * speed;
+            //position += direction * deltaTime * speed;
         }
         // Move backward
         if (glfwGetKey(window,  GLFW_KEY_S ) == GLFW_PRESS){
-            position -= direction * deltaTime * speed;
+            //position -= direction * deltaTime * speed;
         }
         // Strafe right
         if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS){
-            position += right * deltaTime * speed;
+            //position += right * deltaTime * speed;
         }
         // Strafe left
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS){
-            position -= right * deltaTime * speed;
+            //position -= right * deltaTime * speed;
         }
+
+        // Direction : Spherical coordinates to Cartesian coordinates conversion
+       /* glm::vec3 direction(
+            cos(vertical) * sin(horizontal),
+            sin(vertical),
+            cos(vertical) * cos(horizontal)
+        );*/
+
 
         //tick GL context to render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
