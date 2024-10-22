@@ -11,3 +11,9 @@ It would be something like Wallpaper Engine (on Steam) - but focusing on the 3D 
 4. Animatable interactions beyond rotate & resize 
 5. GUI user editor 
 6. Content workshop platform (would be another server-side project) 
+
+## Credits
+from Laolu Productions, currently a personal studio owned by Benhao (Hao) Lu. 
+For previous work, check: 
+1. Traveler's Game (on Steam) 
+2. Indie Dream (on Steam) 
