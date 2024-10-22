@@ -12,6 +12,7 @@
 #include "log/log.hpp"
 #include "common/gl_check.hpp"
 #include "windows.h"
+#include "text/text_draw.hpp"
 
 glm::vec3 position = glm::vec3(0.0f,0.0f,5.0f);
 float horizontal = 3.14f;
@@ -23,7 +24,12 @@ float mouseSpeed = 0.5f;
 double lastCursorX = 800.0f/2.0f;
 double lastCursorY = 600.0f/2.0f;
 
+int ResolutionX = 800;
+int ResolutionY = 600;
+
 int main(){
+    LogClearAll();
+
     glewExperimental = GL_TRUE; //for core profile
 
     if (!glfwInit()){
@@ -52,7 +58,7 @@ int main(){
     glfwWindowHint(GLFW_BLUE_BITS, 8);
     glfwWindowHint(GLFW_ALPHA_BITS, 8);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Laolu Productions", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(ResolutionX, ResolutionY, "Laolu Productions", NULL, NULL);
 
     if (window == NULL){
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -74,23 +80,27 @@ int main(){
     CheckGLError("GLFW Init");
 
     //GL context creation
-    //add draw call for the ring
     GLContext context;
+    context.SetResolution(ResolutionX, ResolutionY);
+
+    //add draw call for the ring
+    
     DrawCall drawCall;
     drawCall.BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
     CheckGLError("Shader Load");
     drawCall.AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
     CheckGLError("Light Add");
-
+    drawCall.SetType(DrawCallType::MESH);
     drawCall.AddModel("objs/ring.obj");
     CheckGLError("Model Add");
     drawCall.AddTexture("textures/ring.bmp");
     CheckGLError("Texture Add");
-
     drawCall.BufferInit();
     CheckGLError("Buffer Init");
-    
     context.AddDrawCall(&drawCall);
+
+    //show text
+    printText2D("Hello World", 10, 10, 20, &context);
 
     // Enable depth test
     glEnable(GL_DEPTH_TEST);

@@ -5,6 +5,11 @@
 
 #include <string>
 
+enum class DrawCallType{
+    MESH,
+    TEXT
+};
+
 class DrawCall{
 public:
     DrawCall();
@@ -22,11 +27,20 @@ public:
     void AddTexture(std::string TexturePath);
     void AddModel(std::string modelPath);
 
+    void SetType(DrawCallType type){
+        this->type = type;
+    }
+
+    DrawCallType GetType(){
+        return this->type;
+    }
+
     GLuint GetProgramID(){return this->programID;}
     GLuint GetElementBufferID(){return this->elementbufferID;}
     GLuint GetVertexBufferID(){return this->vertexbufferID;}
     GLuint GetUVBufferID(){return this->uvbufferID;}
     GLuint GetNormalBufferID(){return this->normalbufferID;}
+    GLuint GetVAO(){return this->VAO;}
     std::vector<glm::vec3>& GetVertices(){return this->vertices;}
     std::vector<glm::vec2>& GetUVs(){return this->uvs;}
     std::vector<glm::vec3>& GetNormals(){return this->normals;}
@@ -59,4 +73,8 @@ private:
     glm::vec3 lightIntensity;
     GLuint lightID;
     GLuint lightIntID;
+
+    //other
+    DrawCallType type;
+    GLuint VAO;
 };
