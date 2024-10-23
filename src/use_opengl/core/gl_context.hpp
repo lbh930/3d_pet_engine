@@ -14,6 +14,8 @@ public:
 
     void AddDrawCall(DrawCall* drawCall){drawCalls.push_back(drawCall);}
 
+    void ClearDrawCalls();
+
     void SetResolution(int x, int y){resolutionX = x; resolutionY = y;}
 
     std::tuple<int, int> GetResolution(){return std::make_tuple(resolutionX, resolutionY);}

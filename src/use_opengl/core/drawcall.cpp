@@ -33,6 +33,34 @@ std::vector<glm::vec3>&& normals, std::vector<unsigned int>&& vboIndices):
 DrawCall::~DrawCall()
 {
     Log("DrawCall destructed");
+    //delete buffers
+
+    if (elementbufferID != 0) {
+        glDeleteBuffers(1, &elementbufferID);
+    }
+
+    if (vertexbufferID != 0) {
+        glDeleteBuffers(1, &vertexbufferID);
+    }
+
+    if (uvbufferID != 0) {
+        glDeleteBuffers(1, &uvbufferID);
+    }
+
+    if (normalbufferID != 0) {
+        glDeleteBuffers(1, &normalbufferID);
+    }
+
+    if (textureID != 0) {
+        glDeleteTextures(1, &textureID);
+    }
+
+    if (VAO != 0) {
+        glDeleteVertexArrays(1, &VAO);
+    }
+
+    CheckGLError("DrawCall Destructor");
+
 }
 
 void DrawCall::AddLight(glm::vec3 lightPos, glm::vec3 lightIntensity)

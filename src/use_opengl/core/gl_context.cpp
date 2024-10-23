@@ -3,6 +3,12 @@
 #include "log/log.hpp"
 #include "common/gl_check.hpp"
 
+void GLContext::ClearDrawCalls(){
+    //I love manual memory management
+    
+    drawCalls.clear();
+}
+
 /*
 Set the attribute layout for the draw call
 For MESH and TEXT type of draw calls, different layout are used.
@@ -84,9 +90,12 @@ void SetAttribLayout(DrawCall* drawCall){
 void GLContext::Tick(glm::vec3 camPosition, glm::vec3 camDirection)
 {
     for (int i = 0; i < drawCalls.size(); i++){
+        CheckGLError("GL Context Tick");
+
+        Log("Drawing ", i, "th draw call", " with VAO ", drawCalls[i]->GetVAO());
         glBindVertexArray(drawCalls[i]->GetVAO());
         
-        CheckGLError("GL Context Tick");
+        CheckGLError("GL Bind Vertex Array");
         DrawCall* drawCall = drawCalls[i];
 
         glm::mat4 ProjectionMatrix;

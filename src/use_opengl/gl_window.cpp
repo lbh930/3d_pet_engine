@@ -13,6 +13,8 @@
 #include "common/gl_check.hpp"
 #include "windows.h"
 #include "text/text_draw.hpp"
+#include "core/scene.hpp"
+#include "core/game_object/objects.hpp"
 
 glm::vec3 position = glm::vec3(0.0f,0.0f,5.0f);
 float horizontal = 3.14f;
@@ -79,31 +81,26 @@ int main(){
 
     CheckGLError("GLFW Init");
 
-    //GL context creation
+    //Scene and GL context creation
+    Scene scene;
     GLContext context;
+    scene.SetCameraPosition(glm::vec3(0.0f, 3.0f, 5.0f));
+    scene.SetCameraDirection(glm::vec3(0.0f, -0.3f, -1.0f));
     context.SetResolution(ResolutionX, ResolutionY);
+    scene.SetGLContext(&context);
 
-    //add draw call for the ring
+    //add some objects
+    TextObject* myText = new TextObject();
+    myText->SetText("Hello dude");
+    scene.AddGameObject(myText);
+    GameObject* myModel = new GameObject(GameObjectType::MODEL);
+    scene.AddGameObject(myModel);
     
-    DrawCall drawCall;
-    drawCall.BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
-    CheckGLError("Shader Load");
-    drawCall.AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
-    CheckGLError("Light Add");
-    drawCall.SetType(DrawCallType::MESH);
-    drawCall.AddModel("objs/ring.obj");
-    CheckGLError("Model Add");
-    drawCall.AddTexture("textures/ring.bmp");
-    CheckGLError("Texture Add");
-    drawCall.BufferInit();
-    CheckGLError("Buffer Init");
-    context.AddDrawCall(&drawCall);
 
-    //show text
-    printText2D("Hello World", 10, 10, 20, &context);
-
-    // Enable depth test
+    // Enable depth test`
     glEnable(GL_DEPTH_TEST);
+
+    glfwSwapInterval(0); //disable vsync
     // Accept fragment if it closer to the camera than the former one
 
     glEnable(GL_CULL_FACE); // Cull triangles which normal is not towards the camera
@@ -196,13 +193,18 @@ int main(){
             cos(vertical) * cos(horizontal)
         );*/
 
+        //show framerate
+        myText->SetText("Rrefresh Latency: " + std::to_string(deltaTime));
+
 
         //tick GL context to render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         //Log("Position: ", position.x, ", ", position.y, ", ", position.z);
         //Log("Direction: ", direction.x, ", ", direction.y, ", ", direction.z);
+        scene.SetCameraPosition(position);
+        scene.SetCameraDirection(direction);
 
-        context.Tick(position, direction);
+        scene.Render();
 
         // Swap buffers
         glfwSwapBuffers(window);
