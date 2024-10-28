@@ -1,9 +1,12 @@
 #include "scene.hpp"
 #include "common/gl_check.hpp"
 #include "text/text_draw.hpp"
+#include "common/bmp_loader.hpp"
+#include "common/obj_loader.hpp"
 #include "common/gl_shader.hpp"
 #include "core/game_object/objects.hpp"
 #include "log/log.hpp"
+#include <thread>
 
 Scene::Scene()
     : hierarchyRoot(std::make_unique<hierarchyNode>()),
@@ -48,18 +51,42 @@ void Scene::Render()
         if (gameObject->GetType() == GameObjectType::MODEL) {
             auto drawCall = gameObject->GetDrawCall();
             if (drawCall == nullptr) {
+                std::vector<std::thread> threads; //temp thread pool for resource load
+
                 drawCall = std::make_shared<DrawCall>();
+                std::vector<unsigned char> textureData;
+                std::pair <int, int> textureSize;
                 Log("Scene: drawing Model Object");
-                drawCall->BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
-                CheckGLError("Shader Load");
+
+                GLuint programID = 0;
+
+                //threads.push_back(std::thread([drawCall, &programID](){
+                    programID = LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl");
+                    Log("Scene: Object Shader Loaded, ID: ", programID);
+               //}));
+
+                //threads.push_back(std::thread([drawCall](){
+                    drawCall->AddModel("objs/ring.obj");
+                //}));
+
+                threads.push_back(std::thread([drawCall, &textureData, &textureSize](){
+                    loadBMP("textures/ring.bmp", textureData, textureSize);
+                }));
+
+                for (auto& thread : threads){
+                    thread.join();
+                }
+
+                CheckGLError("Resource (Model & Texture & Shader) Add");
+
+                drawCall->BindProgramID(programID);
+                drawCall->AddTexture(textureData, textureSize);
                 drawCall->AddLight(glm::vec3(1, 4, 2), 16);
                 CheckGLError("Light Add");
                 drawCall->SetType(DrawCallType::MESH);
                 CheckGLError("DrawCall Type Set");
-                drawCall->AddModel("objs/ring.obj");
-                CheckGLError("Model Add");
-                drawCall->AddTexture("textures/ring.bmp");
-                CheckGLError("Texture Add");
+
+                //do buffer init only after all resources are loaded
                 drawCall->BufferInit();
                 CheckGLError("Buffer Init");
                 glContext->AddDrawCall(drawCall);

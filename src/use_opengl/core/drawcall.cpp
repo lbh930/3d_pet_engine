@@ -111,17 +111,25 @@ void DrawCall::AddLight(const glm::vec3& lightPos, const float & lightIntensity)
     this->lightIntID = glGetUniformLocation(programID, "LightIntensity");
 }
 
-void DrawCall::AddTexture(const std::string& texturePath)
+void DrawCall::AddTexture(std::vector<unsigned char>& textureData, const std::pair<int, int>& textureSize)
 {
-    CheckGLError("Before Load BMP");
-    this->textureID = loadBMP(texturePath.c_str());
-    if (textureID == 0) {
-        Error("Failed to load texture: ", texturePath);
-        return;
-    }
-    CheckGLError("After Load BMP");
+    // Create one OpenGL texture
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+
+    // "Bind" the newly created texture: all future texture functions will modify this texture
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // Give the image to OpenGL
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureSize.first, textureSize.second, 0, GL_BGR, GL_UNSIGNED_BYTE, textureData.data());
+
+    // Set the texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  // When magnifying, use linear filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);  // When minifying, use linear mipmap linear filtering
+
+    // Generate mipmaps
+    glGenerateMipmap(GL_TEXTURE_2D);
     this->textureUniformID = glGetUniformLocation(programID, "myTextureSampler");
-    CheckGLError("After Get Uniform Texture");
 }
 
 void DrawCall::AddModel(const std::string& modelPath)

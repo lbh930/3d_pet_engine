@@ -10,7 +10,7 @@
 // Loads a BMP image and creates an OpenGL texture from it.
 // Takes the file path of the BMP image.
 // Returns the OpenGL texture ID if loading was successful, or 0 if it failed.
-GLuint loadBMP(const char* imagePath) {
+bool loadBMP(const char* imagePath, std::vector<unsigned char> &data, std::pair<int, int>& textureSize) {
     constexpr size_t headerSize = 54;  // Each BMP file begins with a 54-byte header
     std::array<unsigned char, headerSize> header{};
     unsigned int dataPos;
@@ -49,12 +49,14 @@ GLuint loadBMP(const char* imagePath) {
     width = readUInt32(header.data(), 0x12);
     height = readUInt32(header.data(), 0x16);
 
+    textureSize = std::make_pair(width, height);
+
     // Some BMP files are misformatted; guess missing information
     if (imageSize == 0) imageSize = width * height * 3;  // 3 bytes per pixel (RGB)
     if (dataPos == 0) dataPos = headerSize;
 
     // Create a buffer
-    std::vector<unsigned char> data(imageSize);
+    data = std::vector<unsigned char>(imageSize);
 
     // Read the actual data from the file into the buffer
     file.seekg(dataPos, std::ios::beg); //set the file read pointer to the beginning of the image data
@@ -66,24 +68,7 @@ GLuint loadBMP(const char* imagePath) {
     // Close the file
     file.close();
 
-    // Create one OpenGL texture
-    GLuint textureID;
-    glGenTextures(1, &textureID);
-
-    // "Bind" the newly created texture: all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data.data());
-
-    // Set the texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  // When magnifying, use linear filtering
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);  // When minifying, use linear mipmap linear filtering
-
-    // Generate mipmaps
-    glGenerateMipmap(GL_TEXTURE_2D);
-
     Log("Texture loaded: ", imagePath);
 
-    return textureID;
+    return true;
 }

@@ -31,7 +31,7 @@ public:
     void BufferInit();
 
     void AddLight(const glm::vec3& lightPos, const float& lightIntensity);
-    void AddTexture(const std::string& texturePath);
+    void AddTexture(std::vector<unsigned char>& textureData, const std::pair<int, int>& textureSize);
     void AddModel(const std::string& modelPath);
 
     void SetType(DrawCallType type){

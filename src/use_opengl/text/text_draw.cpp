@@ -9,6 +9,8 @@
 #include "log/log.hpp"
 #include <memory>
 #include <string_view>
+#include <common/bmp_loader.hpp>
+
 
 // Prints text in 2D using the provided GLContext
 void printText2D(std::string_view text, int x, int y, int size, GLContext* context) {
@@ -20,8 +22,10 @@ void printText2D(std::string_view text, int x, int y, int size, GLContext* conte
     CheckGLError("Text Shader Load");
 
     // Bind the shader program
-    drawCall->BindProgramID(LoadShaders("shaders/texts/text_vertex.glsl", "shaders/texts/text_fragment.glsl"));
+    GLuint programID = LoadShaders("shaders/texts/text_vertex.glsl", "shaders/texts/text_fragment.glsl");
+    drawCall->BindProgramID(programID);
     CheckGLError("Text Shader Load : drawCall->BindProgramID");
+    Log("Text Shader Loaded", programID);
 
     auto& vertices = drawCall->GetVertices();
     auto& uvs = drawCall->GetUVs();
@@ -91,7 +95,11 @@ void printText2D(std::string_view text, int x, int y, int size, GLContext* conte
 
     // Initialize buffers and add the draw call to the context
     drawCall->SetType(DrawCallType::TEXT);
-    drawCall->AddTexture("textures/font.bmp");
+
+    std::vector<unsigned char> textureData;
+    std::pair <int, int> textureSize;
+    loadBMP("textures/font.bmp", textureData, textureSize);
+    drawCall->AddTexture(textureData, textureSize);
 
     CheckGLError("Text Texture Add");
 
