@@ -13,8 +13,8 @@ public:
 
     void Tick(const glm::vec3& camPosition, const glm::vec3& camDirection);
 
-    void AddDrawCall(std::unique_ptr<DrawCall> drawCall){
-        drawCalls.push_back(std::move(drawCall));
+    void AddDrawCall(std::shared_ptr<DrawCall> drawCall){
+        drawCalls.push_back(drawCall);
     }
 
 
@@ -29,7 +29,7 @@ private:
     GLuint ViewMatrixID;
     GLuint ModelMatrixID;
 
-    std::vector<std::unique_ptr<DrawCall>> drawCalls;
+    std::vector<std::shared_ptr<DrawCall>> drawCalls;
 
     int resolutionX;
     int resolutionY;

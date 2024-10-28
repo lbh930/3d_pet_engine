@@ -6,6 +6,8 @@ I remember the good old days when I was playing with Unity Engine for my project
 #pragma once
 
 #include <glm/glm.hpp>
+#include "core/drawcall.hpp"
+#include <memory>
 
 enum class GameObjectType{
     // The GameObject is a 3D model
@@ -24,8 +26,11 @@ public:
     void RegisterID(int id);
     virtual ~GameObject();
     GameObjectType GetType();
+    std::shared_ptr<DrawCall> GetDrawCall();
+    void SetDrawCall(std::shared_ptr<DrawCall> drawCall);
 
 private:
     uint32_t id = -1;
     GameObjectType type;
+    std::shared_ptr<DrawCall> drawCall;
 };

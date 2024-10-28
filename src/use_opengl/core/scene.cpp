@@ -45,24 +45,30 @@ void Scene::Render()
     for (auto& [id, node] : objectMap) {
         GameObject* gameObject = node->gameObject;
 
-        auto drawCall = std::make_unique<DrawCall>();
-
         if (gameObject->GetType() == GameObjectType::MODEL) {
-            Log("Scene: drawing Model Object");
-            drawCall->BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
-            CheckGLError("Shader Load");
-            drawCall->AddLight(glm::vec3(1, 4, 2), 16);
-            CheckGLError("Light Add");
-            drawCall->SetType(DrawCallType::MESH);
-            CheckGLError("DrawCall Type Set");
-            drawCall->AddModel("objs/ring.obj");
-            CheckGLError("Model Add");
-            drawCall->AddTexture("textures/ring.bmp");
-            CheckGLError("Texture Add");
-            drawCall->BufferInit();
-            CheckGLError("Buffer Init");
-            glContext->AddDrawCall(std::move(drawCall));
-            Log("Scene: Model DrawCall Added");
+            auto drawCall = gameObject->GetDrawCall();
+            if (drawCall == nullptr) {
+                drawCall = std::make_shared<DrawCall>();
+                Log("Scene: drawing Model Object");
+                drawCall->BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
+                CheckGLError("Shader Load");
+                drawCall->AddLight(glm::vec3(1, 4, 2), 16);
+                CheckGLError("Light Add");
+                drawCall->SetType(DrawCallType::MESH);
+                CheckGLError("DrawCall Type Set");
+                drawCall->AddModel("objs/ring.obj");
+                CheckGLError("Model Add");
+                drawCall->AddTexture("textures/ring.bmp");
+                CheckGLError("Texture Add");
+                drawCall->BufferInit();
+                CheckGLError("Buffer Init");
+                glContext->AddDrawCall(drawCall);
+                Log("Scene: Model DrawCall Added");
+                gameObject->SetDrawCall(drawCall);
+            }else{
+                Log("Scene: Model DrawCall already exists");
+                glContext->AddDrawCall(drawCall);
+            }
         } else if (gameObject->GetType() == GameObjectType::TEXT) {
             Log("Scene: drawing Text Object");
             // Show text

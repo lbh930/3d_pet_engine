@@ -15,3 +15,11 @@ void GameObject::RegisterID(int id){
 GameObjectType GameObject::GetType(){
     return type;
 }
+
+std::shared_ptr<DrawCall> GameObject::GetDrawCall(){
+    return drawCall;
+}
+
+void GameObject::SetDrawCall(std::shared_ptr<DrawCall> drawCall){
+    this->drawCall = drawCall;
+}
