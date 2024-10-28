@@ -7,6 +7,7 @@ Scene - Manager of a scene. A scene consists of game objects, lights, cameras, a
 #include <unordered_map>
 #include "core/gl_context.hpp"
 #include "game_object/game_object.hpp"
+#include <memory>
 
 //a scene is structured as a tree
 struct hierarchyNode{
@@ -25,12 +26,12 @@ struct hierarchyNode{
         delete gameObject;
     }
 
-    hierarchyNode* AddChild(hierarchyNode* child){
-        children.push_back(child);
+    hierarchyNode* AddChild(std::shared_ptr<hierarchyNode> child){
+        children.push_back(child.get());
     }
 
-    hierarchyNode* AddChild(GameObject* gameObject){
-        children.push_back(new hierarchyNode(gameObject));
+    hierarchyNode* AddChild(std::shared_ptr<GameObject> gameObject){
+        children.push_back(new hierarchyNode(gameObject.get()));
         return children.back();
     }
 };
@@ -40,13 +41,13 @@ public:
     Scene();
     ~Scene();
 
-    void AddGameObject(GameObject* gameObject);
-    void RemoveGameObject(GameObject* gameObject);
+    void AddGameObject(std::shared_ptr<GameObject> gameObject);
+    void RemoveGameObject(const GameObject* gameObject);
 
-    void SetCameraPosition(glm::vec3 position);
-    void SetCameraDirection(glm::vec3 direction);
+    void SetCameraPosition(const glm::vec3& position);
+    void SetCameraDirection(const glm::vec3& direction);
 
-    void SetGLContext(GLContext* glContext);
+    void SetGLContext(const std::shared_ptr<GLContext> glContext);
 
     glm::vec3 GetCameraPosition();
     glm::vec3 GetCameraDirection();
@@ -62,13 +63,13 @@ public:
 
 private:
     //Scene contexts
-    GLContext* glContext;
+    std::shared_ptr<GLContext> glContext;
 
     //camera infos
     glm::vec3 cameraPosition;
     glm::vec3 cameraDirection;
 
     //game objects
-    hierarchyNode* hierarchyRoot;
+    std::unique_ptr<hierarchyNode> hierarchyRoot;
     std::unordered_map<uint32_t, hierarchyNode*> objectMap; //for fast access to gameobject via object id
 };

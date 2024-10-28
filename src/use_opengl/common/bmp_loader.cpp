@@ -57,7 +57,7 @@ GLuint loadBMP(const char* imagePath) {
     std::vector<unsigned char> data(imageSize);
 
     // Read the actual data from the file into the buffer
-    file.seekg(dataPos, std::ios::beg);
+    file.seekg(dataPos, std::ios::beg); //set the file read pointer to the beginning of the image data
     if (!file.read(reinterpret_cast<char*>(data.data()), imageSize)) {
         printf("Failed to read image data\n");
         return 0;

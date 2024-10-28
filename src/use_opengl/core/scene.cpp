@@ -5,48 +5,53 @@
 #include "core/game_object/objects.hpp"
 #include "log/log.hpp"
 
-Scene::Scene(){
-    hierarchyRoot = new hierarchyNode();
-    cameraPosition = glm::vec3(0.0f, 3.0f, 5.0f);
-    cameraDirection = glm::vec3(0.0f, -0.3f, -1.0f);
+Scene::Scene()
+    : hierarchyRoot(std::make_unique<hierarchyNode>()),
+      cameraPosition(0.0f, 3.0f, 5.0f),
+      cameraDirection(0.0f, -0.3f, -1.0f)
+{
 }
 
-Scene::~Scene(){
-    delete hierarchyRoot;
+Scene::~Scene()
+{
+    // Smart pointers automatically clean up
 }
 
-void Scene::AddGameObject(GameObject* gameObject){
-    if (hierarchyRoot == nullptr){
-        hierarchyRoot = new hierarchyNode();
+void Scene::AddGameObject(std::shared_ptr<GameObject> gameObject)
+{
+    if (!hierarchyRoot) {
+        hierarchyRoot = std::make_unique<hierarchyNode>();
     }
 
-    //Generate an ID for gameObject
-    int newId = GenId();
+    // Generate an ID for gameObject
+    uint32_t newId = GenId();
     gameObject->RegisterID(newId);
     objectMap[newId] = hierarchyRoot->AddChild(gameObject);
 }
 
-uint32_t Scene::GenId(){
+uint32_t Scene::GenId()
+{
     static uint32_t id = 0;
     return id++;
 }
 
-void Scene::Render(){
+void Scene::Render()
+{
     Log("Scene Render");
     glContext->ClearDrawCalls();
-    //traverse the scene objects and generate drawcalls for them
-    
-    //TO BE OPTIMIZED - current way is adding single drawcall for each object!
-    for (auto it = objectMap.begin(); it != objectMap.end(); ++it){
-        GameObject* gameObject = it->second->gameObject;
+    // Traverse the scene objects and generate draw calls for them
 
-        DrawCall* drawCall = new DrawCall();
+    // TODO: Optimize - current way is adding single draw call for each object
+    for (auto& [id, node] : objectMap) {
+        GameObject* gameObject = node->gameObject;
 
-        if (gameObject->GetType() == GameObjectType::MODEL){
+        auto drawCall = std::make_unique<DrawCall>();
+
+        if (gameObject->GetType() == GameObjectType::MODEL) {
             Log("Scene: drawing Model Object");
             drawCall->BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
             CheckGLError("Shader Load");
-            drawCall->AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
+            drawCall->AddLight(glm::vec3(1, 4, 2), 16);
             CheckGLError("Light Add");
             drawCall->SetType(DrawCallType::MESH);
             CheckGLError("DrawCall Type Set");
@@ -56,15 +61,15 @@ void Scene::Render(){
             CheckGLError("Texture Add");
             drawCall->BufferInit();
             CheckGLError("Buffer Init");
-            glContext->AddDrawCall(drawCall);
+            glContext->AddDrawCall(std::move(drawCall));
             Log("Scene: Model DrawCall Added");
-        }else if (gameObject->GetType() == GameObjectType::TEXT){
+        } else if (gameObject->GetType() == GameObjectType::TEXT) {
             Log("Scene: drawing Text Object");
-            //show text
+            // Show text
             TextObject* textObject = dynamic_cast<TextObject*>(gameObject);
-    
+
             if (textObject) {
-                printText2D((textObject->GetText()).c_str(), 10, 10, 20, glContext);
+                printText2D(std::string_view(textObject->GetText()), 10, 10, 20, glContext.get());
             } else {
                 Error("Failed to cast GameObject to TextObject");
             }
@@ -73,26 +78,31 @@ void Scene::Render(){
     }
 
     CheckGLError("Before calling tick() at Scene.Render()");
-    
+
     glContext->Tick(cameraPosition, cameraDirection);
 }
 
-void Scene::SetCameraPosition(glm::vec3 position){
+void Scene::SetCameraPosition(const glm::vec3& position)
+{
     cameraPosition = position;
 }
 
-void Scene::SetCameraDirection(glm::vec3 direction){
+void Scene::SetCameraDirection(const glm::vec3& direction)
+{
     cameraDirection = direction;
 }
 
-glm::vec3 Scene::GetCameraPosition(){
+glm::vec3 Scene::GetCameraPosition()
+{
     return cameraPosition;
 }
 
-glm::vec3 Scene::GetCameraDirection(){
+glm::vec3 Scene::GetCameraDirection()
+{
     return cameraDirection;
 }
 
-void Scene::SetGLContext(GLContext* glContext){
+void Scene::SetGLContext(std::shared_ptr<GLContext> glContext)
+{
     this->glContext = glContext;
 }

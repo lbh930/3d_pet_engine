@@ -13,7 +13,14 @@ enum class DrawCallType{
 class DrawCall{
 public:
     DrawCall();
-    DrawCall(std::vector<glm::vec3>& vertices, std::vector<glm::vec2>& uvs, std::vector<glm::vec3>& normals, std::vector<unsigned int>& vboIndices);
+
+    DrawCall(const std::vector<glm::vec3>& vertices, const std::vector<glm::vec2>& uvs,
+    const std::vector<glm::vec3>& normals,
+    const std::vector<unsigned int>& vboIndices);
+
+    // Move constructor
+    DrawCall(DrawCall&& other) noexcept;
+
     DrawCall(std::vector<glm::vec3>&& vertices, std::vector<glm::vec2>&& uvs, std::vector<glm::vec3>&& normals, std::vector<unsigned int>&& vboIndices);
     ~DrawCall();
 
@@ -23,33 +30,35 @@ public:
 
     void BufferInit();
 
-    void AddLight(glm::vec3 lightPos, glm::vec3 lightIntensity);
-    void AddTexture(std::string TexturePath);
-    void AddModel(std::string modelPath);
+    void AddLight(const glm::vec3& lightPos, const float& lightIntensity);
+    void AddTexture(const std::string& texturePath);
+    void AddModel(const std::string& modelPath);
 
     void SetType(DrawCallType type){
         this->type = type;
     }
 
-    DrawCallType GetType(){
+    DrawCallType GetType() const{
         return this->type;
     }
 
-    GLuint GetProgramID(){return this->programID;}
-    GLuint GetElementBufferID(){return this->elementbufferID;}
-    GLuint GetVertexBufferID(){return this->vertexbufferID;}
-    GLuint GetUVBufferID(){return this->uvbufferID;}
-    GLuint GetNormalBufferID(){return this->normalbufferID;}
-    GLuint GetVAO(){return this->VAO;}
-    std::vector<glm::vec3>& GetVertices(){return this->vertices;}
-    std::vector<glm::vec2>& GetUVs(){return this->uvs;}
-    std::vector<glm::vec3>& GetNormals(){return this->normals;}
-    std::vector<unsigned int>& GetVBOIndices(){return this->vboIndices;}
-    GLuint GetLightID(){return this->lightID;}
-    GLuint GetLightIntID(){return this->lightIntID;}
-    GLuint GetTextureID(){return this->textureID;}
-    GLuint GetTextureUniformID(){return this->textureUniformID;}
-    GLuint GetModelID(){return this->modelID;}
+    GLuint GetProgramID() const{return this->programID;}
+    GLuint GetElementBufferID() const{return this->elementbufferID;}
+    GLuint GetVertexBufferID() const{return this->vertexbufferID;}
+    GLuint GetUVBufferID() const{return this->uvbufferID;}
+    GLuint GetNormalBufferID() const{return this->normalbufferID;}
+    GLuint GetVAO() const{return this->VAO;}
+    std::vector<glm::vec3>& GetVertices() {return this->vertices;}
+    std::vector<glm::vec2>& GetUVs() {return this->uvs;}
+    std::vector<glm::vec3>& GetNormals() {return this->normals;}
+    std::vector<unsigned int>& GetVBOIndices() {return this->vboIndices;}
+    GLuint GetLightID() const{return this->lightID;}
+    GLuint GetLightIntID() const{return this->lightIntID;}
+    glm::vec3 GetLightPosition() const{return this->lightPos;}
+    float GetLightIntensity() const{return this->lightIntensity;}
+    GLuint GetTextureID() const{return this->textureID;}
+    GLuint GetTextureUniformID() const{return this->textureUniformID;}
+    GLuint GetModelID() const{return this->modelID;}
 
 
 private:
@@ -70,7 +79,7 @@ private:
 
     //only support one light for now - will support multiple lights in the future
     glm::vec3 lightPos;
-    glm::vec3 lightIntensity;
+    float lightIntensity;
     GLuint lightID;
     GLuint lightIntID;
 

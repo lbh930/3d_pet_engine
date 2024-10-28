@@ -4,15 +4,19 @@
 #include <GL/glew.h>
 #include "drawcall.hpp"
 #include <tuple>
+#include <memory>
 
 class GLContext{
 public:
     GLContext();
     ~GLContext();
 
-    void Tick(glm::vec3 camPosition, glm::vec3 camDirection);
+    void Tick(const glm::vec3& camPosition, const glm::vec3& camDirection);
 
-    void AddDrawCall(DrawCall* drawCall){drawCalls.push_back(drawCall);}
+    void AddDrawCall(std::unique_ptr<DrawCall> drawCall){
+        drawCalls.push_back(std::move(drawCall));
+    }
+
 
     void ClearDrawCalls();
 
@@ -25,7 +29,7 @@ private:
     GLuint ViewMatrixID;
     GLuint ModelMatrixID;
 
-    std::vector<DrawCall*> drawCalls;
+    std::vector<std::unique_ptr<DrawCall>> drawCalls;
 
     int resolutionX;
     int resolutionY;
