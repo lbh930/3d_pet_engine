@@ -15,6 +15,7 @@
 #include "text/text_draw.hpp"
 #include "core/scene.hpp"
 #include "core/game_object/objects.hpp"
+#include <memory>
 
 glm::vec3 position = glm::vec3(0.0f,0.0f,5.0f);
 float horizontal = 3.14f;
@@ -83,17 +84,17 @@ int main(){
 
     //Scene and GL context creation
     Scene scene;
-    GLContext context;
+    std::shared_ptr <GLContext> context = std::make_shared<GLContext>();
     scene.SetCameraPosition(glm::vec3(0.0f, 3.0f, 5.0f));
     scene.SetCameraDirection(glm::vec3(0.0f, -0.3f, -1.0f));
-    context.SetResolution(ResolutionX, ResolutionY);
-    scene.SetGLContext(&context);
+    context->SetResolution(ResolutionX, ResolutionY);
+    scene.SetGLContext(context);
 
     //add some objects
-    TextObject* myText = new TextObject();
+    std::shared_ptr<TextObject> myText = std::make_shared<TextObject>();
     myText->SetText("Hello dude");
     scene.AddGameObject(myText);
-    GameObject* myModel = new GameObject(GameObjectType::MODEL);
+    std::shared_ptr<ModelObject> myModel = std::make_shared<ModelObject>();
     scene.AddGameObject(myModel);
     
 
