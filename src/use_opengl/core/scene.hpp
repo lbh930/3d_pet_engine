@@ -22,6 +22,7 @@ struct hierarchyNode{
         for (auto child : children){
             delete child;
         }
+        delete gameObject;
     }
 
     hierarchyNode* AddChild(hierarchyNode* child){

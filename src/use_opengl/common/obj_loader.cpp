@@ -1,98 +1,104 @@
-
-#include <iostream>
-#include <vector>
-#include <GL/glew.h>
-#include <unordered_map>
-#include <glm/gtc/matrix_transform.hpp>
 #include "obj_loader.hpp"
 #include "log/log.hpp"
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <glm/glm.hpp>
+#include <fstream>
+#include <sstream>
+#include <string>
 
-std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
-std::vector< glm::vec3 > temp_vertices;
-std::vector< glm::vec2 > temp_uvs;
-std::vector< glm::vec3 > temp_normals;
+// Loads an OBJ file and extracts vertex, UV, and normal data.
+// Reads vertices, UVs, and normals from the OBJ file and fills output vectors with the parsed data.
+// Generate VBO indices by removing duplicate vertices.
+// Returns true if the file was loaded successfully, false otherwise.
+bool loadOBJ(
+    const char* path,
+    std::vector<glm::vec3>& out_vertices,
+    std::vector<glm::vec2>& out_uvs,
+    std::vector<glm::vec3>& out_normals,
+    std::vector<unsigned int>& vbo_indices_out
+);
 
 bool loadOBJ(
-    const char * path,
-    std::vector < glm::vec3 > & out_vertices,
-    std::vector < glm::vec2 > & out_uvs,
-    std::vector < glm::vec3 > & out_normals,
-    std::vector < unsigned int > & vbo_indices_out
-)
-{
-    FILE * file = fopen(path, "r");
-    if( file == NULL ){
-        printf("Impossible to open the file !\n");
+    const char* path,
+    std::vector<glm::vec3>& out_vertices,
+    std::vector<glm::vec2>& out_uvs,
+    std::vector<glm::vec3>& out_normals,
+    std::vector<unsigned int>& vbo_indices_out
+) {
+    std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+    std::vector<glm::vec3> temp_vertices;
+    std::vector<glm::vec2> temp_uvs;
+    std::vector<glm::vec3> temp_normals;
+
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        printf("Impossible to open the file!\n");
         return false;
     }
 
-    while( 1 ){
-        char lineHeader[128];
-        // read the first word of the line
-        int res = fscanf(file, "%s", lineHeader);
-        if (res == EOF)
-            break; // EOF = End Of File. Quit the loop.
+    Log("Loading OBJ file: ", path);
 
-        if ( strcmp( lineHeader, "v" ) == 0 ){
+    std::string line;
+    while (std::getline(file, line)) {
+        std::istringstream lineStream(line);
+        std::string lineHeader;
+        lineStream >> lineHeader;
+
+        if (lineHeader == "v") {
             glm::vec3 vertex;
-            fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z );
+            lineStream >> vertex.x >> vertex.y >> vertex.z;
             temp_vertices.push_back(vertex);
-        }else if ( strcmp( lineHeader, "vt" ) == 0 ){
+        } else if (lineHeader == "vt") {
             glm::vec2 uv;
-            fscanf(file, "%f %f\n", &uv.x, &uv.y );
+            lineStream >> uv.x >> uv.y;
             temp_uvs.push_back(uv);
-        }else if ( strcmp( lineHeader, "vn" ) == 0 ){
+        } else if (lineHeader == "vn") {
             glm::vec3 normal;
-            fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z );
+            lineStream >> normal.x >> normal.y >> normal.z;
             temp_normals.push_back(normal);
-        }else if ( strcmp( lineHeader, "f" ) == 0 ){
-            std::string vertex1, vertex2, vertex3;
+        } else if (lineHeader == "f") {
             unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
-            int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
-            if (matches != 9){
-                printf("File can't be read by our simple parser : ( Try exporting with other options\n");
-                return false;
+            char slash;  // to consume '/'
+            for (int i = 0; i < 3; i++) {
+                lineStream >> vertexIndex[i] >> slash >> uvIndex[i] >> slash >> normalIndex[i];
+                vertexIndices.push_back(vertexIndex[i]);
+                uvIndices.push_back(uvIndex[i]);
+                normalIndices.push_back(normalIndex[i]);
             }
-            vertexIndices.push_back(vertexIndex[0]);
-            vertexIndices.push_back(vertexIndex[1]);
-            vertexIndices.push_back(vertexIndex[2]);
-            uvIndices.push_back(uvIndex[0]);
-            uvIndices.push_back(uvIndex[1]);
-            uvIndices.push_back(uvIndex[2]);
-            normalIndices.push_back(normalIndex[0]);
-            normalIndices.push_back(normalIndex[1]);
-            normalIndices.push_back(normalIndex[2]);
         }
-        // else : parse lineHeader
     }
 
-    std::unordered_map<Vertex, int, VertexHash> vbo_map;
+    Log("OBJ file loaded: ", path, " with ", temp_vertices.size(), " vertices");
 
-     // For each vertex of each triangle
-    for( unsigned int i=0; i<vertexIndices.size(); i++ ){
+    std::unordered_map<Vertex, unsigned int, VertexHash> vbo_map;
+
+    // For each vertex of each triangle
+    for (size_t i = 0; i < vertexIndices.size(); i++) {
         unsigned int vertexIndex = vertexIndices[i];
-        glm::vec3 vertex = temp_vertices[ vertexIndex-1 ];
+        glm::vec3 vertex = temp_vertices[vertexIndex - 1];
 
         unsigned int uvIndex = uvIndices[i];
-        glm::vec2 uv = temp_uvs[ uvIndex-1 ];
+        glm::vec2 uv = temp_uvs[uvIndex - 1];
 
         unsigned int normalIndex = normalIndices[i];
-        glm::vec3 normal = temp_normals[ normalIndex-1 ];
+        glm::vec3 normal = temp_normals[normalIndex - 1];
 
         Vertex vbo_vertex = {vertex.x, vertex.y, vertex.z, uv.x, uv.y, normal.x, normal.y, normal.z};
         if (vbo_map.find(vbo_vertex) == vbo_map.end()) {
-            vbo_map[vbo_vertex] = vbo_map.size();
+            unsigned int newIndex = static_cast<unsigned int>(vbo_map.size());
+            vbo_map[vbo_vertex] = newIndex;
             out_vertices.push_back(vertex);
             out_uvs.push_back(uv);
             out_normals.push_back(normal);
-            vbo_indices_out.push_back(vbo_map[vbo_vertex]);
-        }else{
+            vbo_indices_out.push_back(newIndex);
+        } else {
             vbo_indices_out.push_back(vbo_map[vbo_vertex]);
         }
     }
 
-    Log("OBJ file loaded: ", path, " with ", out_vertices.size(), " vertices");
-
+    Log("OBJ load: VBO Indices: ", vbo_indices_out.size());
 
     return true;
 }

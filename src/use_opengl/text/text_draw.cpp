@@ -6,8 +6,10 @@
 #include <core/core.hpp>
 #include <common/gl_shader.hpp>
 #include "common/gl_check.hpp"
+#include "log/log.hpp"
 
 void printText2D(const char * text, int x, int y, int size, GLContext* context){
+    Log("Printing Text");
     
     DrawCall* drawCall = new DrawCall();
     //drawCall->BindProgramID(LoadShaders("shaders/texts/text_vertex.glsl", "shaders/texts/text_fragment.glsl"));
@@ -20,6 +22,8 @@ void printText2D(const char * text, int x, int y, int size, GLContext* context){
     auto& uvs = drawCall->GetUVs();
     
     unsigned int length = strlen(text);
+
+    Log("Text Length: ", length);
     for (unsigned int i = 0; i < length; i++){
         glm::vec3 vertex_up_left = glm::vec3(x+i*size, y+size, 0);
         glm::vec3 vertex_up_right = glm::vec3(x+i*size+size, y+size, 0);
@@ -64,6 +68,8 @@ void printText2D(const char * text, int x, int y, int size, GLContext* context){
         uvs.push_back(uv_down_left);
     }
 
+    Log("Text Vertices: ", vertices.size());
+
     //boot up buffers
     drawCall->SetType(DrawCallType::TEXT);
     drawCall->AddTexture("textures/font.bmp");
@@ -72,4 +78,6 @@ void printText2D(const char * text, int x, int y, int size, GLContext* context){
 
     drawCall->BufferInit();
     context->AddDrawCall(drawCall);
+
+    Log("Text Drawn");
 }

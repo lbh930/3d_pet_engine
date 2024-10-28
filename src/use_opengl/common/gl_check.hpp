@@ -1,3 +1,3 @@
 #include <string>
 #include <iostream>
-void CheckGLError(std::string s);
+void CheckGLError(const std::string& s);

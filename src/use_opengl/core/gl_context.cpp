@@ -5,7 +5,9 @@
 
 void GLContext::ClearDrawCalls(){
     //I love manual memory management
-    
+    for (int i = 0; i < drawCalls.size(); i++){
+        delete drawCalls[i];
+    }
     drawCalls.clear();
 }
 

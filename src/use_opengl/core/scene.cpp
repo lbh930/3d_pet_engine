@@ -32,9 +32,10 @@ uint32_t Scene::GenId(){
 }
 
 void Scene::Render(){
+    Log("Scene Render");
     glContext->ClearDrawCalls();
     //traverse the scene objects and generate drawcalls for them
-
+    
     //TO BE OPTIMIZED - current way is adding single drawcall for each object!
     for (auto it = objectMap.begin(); it != objectMap.end(); ++it){
         GameObject* gameObject = it->second->gameObject;
@@ -42,11 +43,13 @@ void Scene::Render(){
         DrawCall* drawCall = new DrawCall();
 
         if (gameObject->GetType() == GameObjectType::MODEL){
+            Log("Scene: drawing Model Object");
             drawCall->BindProgramID(LoadShaders("shaders/vertex.glsl", "shaders/fragment.glsl"));
             CheckGLError("Shader Load");
             drawCall->AddLight(glm::vec3(1,4,2), glm::vec3(1,1,1));
             CheckGLError("Light Add");
             drawCall->SetType(DrawCallType::MESH);
+            CheckGLError("DrawCall Type Set");
             drawCall->AddModel("objs/ring.obj");
             CheckGLError("Model Add");
             drawCall->AddTexture("textures/ring.bmp");
@@ -54,7 +57,9 @@ void Scene::Render(){
             drawCall->BufferInit();
             CheckGLError("Buffer Init");
             glContext->AddDrawCall(drawCall);
+            Log("Scene: Model DrawCall Added");
         }else if (gameObject->GetType() == GameObjectType::TEXT){
+            Log("Scene: drawing Text Object");
             //show text
             TextObject* textObject = dynamic_cast<TextObject*>(gameObject);
     
@@ -63,6 +68,7 @@ void Scene::Render(){
             } else {
                 Error("Failed to cast GameObject to TextObject");
             }
+            Log("Scene: Text Drawn");
         }
     }
 

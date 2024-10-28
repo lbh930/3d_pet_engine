@@ -1,69 +1,89 @@
-
 #include "bmp_loader.hpp"
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <array>
+#include <string>
 #include "log/log.hpp"
+#include <GL/glew.h>
 
-GLuint loadBMP(const char * imagePath){
-    // Data read from the header of the BMP file
-    unsigned char header[54]; // Each BMP file begins by a 54-bytes header
-    unsigned int dataPos;     // Position in the file where the actual data begins
+// Loads a BMP image and creates an OpenGL texture from it.
+// Takes the file path of the BMP image.
+// Returns the OpenGL texture ID if loading was successful, or 0 if it failed.
+GLuint loadBMP(const char* imagePath) {
+    constexpr size_t headerSize = 54;  // Each BMP file begins with a 54-byte header
+    std::array<unsigned char, headerSize> header{};
+    unsigned int dataPos;
     unsigned int width, height;
-    unsigned int imageSize;   // = width*height*3
-    // Actual RGB data
-    unsigned char * data;
+    unsigned int imageSize;
 
-    FILE * file = fopen(imagePath,"rb");
-    if (!file){printf("Image could not be opened\n"); return 0;}
-
-    if ( fread(header, 1, 54, file)!=54 ){ // If not 54 bytes read : problem
-        printf("Not a correct BMP file\n");
-        return false;
+    // Open the file
+    std::ifstream file(imagePath, std::ios::binary);
+    if (!file) {
+        printf("Image could not be opened\n");
+        return 0;
     }
 
-    if ( header[0]!='B' || header[1]!='M' ){
+    // Read the header
+    if (!file.read(reinterpret_cast<char*>(header.data()), headerSize)) {
         printf("Not a correct BMP file\n");
         return 0;
     }
 
-    // Read ints from the byte array
-    dataPos    = *(int*)&(header[0x0A]);
-    imageSize  = *(int*)&(header[0x22]);
-    width      = *(int*)&(header[0x12]);
-    height     = *(int*)&(header[0x16]);
+    // Check the BMP signature
+    if (header[0] != 'B' || header[1] != 'M') {
+        printf("Not a correct BMP file\n");
+        return 0;
+    }
 
-    // Some BMP files are misformatted, guess missing information
-    if (imageSize==0)    imageSize=width*height*3; // 3 : one byte for each Red, Green and Blue component
-    if (dataPos==0)      dataPos=54; // The BMP header is done that way
+    // Read integers from the byte array (little-endian format)
+    auto readUInt32 = [](const unsigned char* buffer, size_t offset) -> unsigned int {
+        return static_cast<unsigned int>(buffer[offset]) |
+            (static_cast<unsigned int>(buffer[offset + 1]) << 8) |
+            (static_cast<unsigned int>(buffer[offset + 2]) << 16) |
+            (static_cast<unsigned int>(buffer[offset + 3]) << 24);
+    };
+
+    dataPos = readUInt32(header.data(), 0x0A);
+    imageSize = readUInt32(header.data(), 0x22);
+    width = readUInt32(header.data(), 0x12);
+    height = readUInt32(header.data(), 0x16);
+
+    // Some BMP files are misformatted; guess missing information
+    if (imageSize == 0) imageSize = width * height * 3;  // 3 bytes per pixel (RGB)
+    if (dataPos == 0) dataPos = headerSize;
 
     // Create a buffer
-    data = new unsigned char [imageSize];
+    std::vector<unsigned char> data(imageSize);
 
     // Read the actual data from the file into the buffer
-    fread(data,1,imageSize,file);
+    file.seekg(dataPos, std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(data.data()), imageSize)) {
+        printf("Failed to read image data\n");
+        return 0;
+    }
 
-    //Everything is in memory now, the file can be closed
-    fclose(file);
+    // Close the file
+    file.close();
 
     // Create one OpenGL texture
     GLuint textureID;
     glGenTextures(1, &textureID);
 
-    // "Bind" the newly created texture : all future texture functions will modify this texture
+    // "Bind" the newly created texture: all future texture functions will modify this texture
     glBindTexture(GL_TEXTURE_2D, textureID);
 
     // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data.data());
 
-    // When MAGnifying the image (no bigger mipmap available), use LINEAR filtering
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // When MINifying the image, use a LINEAR blend of two mipmaps, each filtered LINEARLY too
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    // Generate mipmaps, by the way.
+    // Set the texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  // When magnifying, use linear filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);  // When minifying, use linear mipmap linear filtering
+
+    // Generate mipmaps
     glGenerateMipmap(GL_TEXTURE_2D);
 
     Log("Texture loaded: ", imagePath);
 
     return textureID;
-
 }

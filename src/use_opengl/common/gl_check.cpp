@@ -1,15 +1,33 @@
 #include "gl_check.hpp"
 #include "GL/glew.h"
 #include <iostream>
-#include <thread> // 包含 sleep_for 函数
-#include <chrono> // 包含时间单位
+#include <unordered_map>
 #include "log/log.hpp"
 
-void CheckGLError(std::string s){
+// Checks for any OpenGL errors after specific calls.
+// Logs errors to the console with a context string for easy tracking.
+void CheckGLError(const std::string& s) {
     GLenum err;
-    while ((err = glGetError()) != GL_NO_ERROR) {
-        Error(s, "OpenGL error: ", err);
+    std::unordered_map<GLenum, std::string> errorMap = {
+        {GL_INVALID_ENUM, "GL_INVALID_ENUM"},
+        {GL_INVALID_VALUE, "GL_INVALID_VALUE"},
+        {GL_INVALID_OPERATION, "GL_INVALID_OPERATION"},
+        {GL_STACK_OVERFLOW, "GL_STACK_OVERFLOW"},
+        {GL_STACK_UNDERFLOW, "GL_STACK_UNDERFLOW"},
+        {GL_OUT_OF_MEMORY, "GL_OUT_OF_MEMORY"},
+        {GL_INVALID_FRAMEBUFFER_OPERATION, "GL_INVALID_FRAMEBUFFER_OPERATION"},
+        // todo: add more error codes
+    };
 
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+    bool hasError = false;
+
+    while ((err = glGetError()) != GL_NO_ERROR) {
+        hasError = true;
+        std::string errorString = errorMap.count(err) ? errorMap[err] : "Unknown Error";
+        Error(s, " OpenGL error: ", errorString, " (", err, ")");
+    }
+
+    if (!hasError) {
+        Log("OpenGL no error: ", s);
     }
 }
